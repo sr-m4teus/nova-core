@@ -1,0 +1,138 @@
+{
+  "meta": {
+    "format_version": "4.10",
+    "model_format": "free",
+    "box_uv": false
+  },
+  "name": "battery_supreme",
+  "model_identifier": "novacore:battery_supreme",
+  "visible_box": [
+    1,
+    1,
+    0
+  ],
+  "variable_placeholders": "",
+  "variable_placeholder_buttons": [],
+  "unhandled_root_fields": {},
+  "resolution": {
+    "width": 16,
+    "height": 16
+  },
+  "elements": [
+    {
+      "name": "cube",
+      "box_uv": false,
+      "rescale": false,
+      "locked": false,
+      "light_emission": 0,
+      "render_order": "default",
+      "allow_mirror_modeling": true,
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "autouv": 0,
+      "color": 0,
+      "origin": [
+        0,
+        0,
+        0
+      ],
+      "uv_offset": [
+        0,
+        0
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "0"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "0"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "0"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "0"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "0"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "0"
+        }
+      },
+      "type": "cube",
+      "uuid": "e51c197c-9194-45ec-8c7d-9ef12eb03931"
+    }
+  ],
+  "outliner": [
+    "e51c197c-9194-45ec-8c7d-9ef12eb03931"
+  ],
+  "textures": [
+    {
+      "path": "",
+      "name": "battery_supreme.png",
+      "folder": "block",
+      "namespace": "",
+      "id": "0",
+      "particle": true,
+      "layers_enabled": false,
+      "use_as_default": false,
+      "render_mode": "default",
+      "render_sides": "auto",
+      "frame_time": 1,
+      "frame_order_type": "loop",
+      "frame_order": "",
+      "frame_interpolate": false,
+      "visible": true,
+      "internal": true,
+      "saved": true,
+      "uuid": "261ce8b0-016a-4fa8-88de-c6f33007f914",
+      "relative_path": "../src/main/resources/assets/novacore/textures/block/battery_supreme.png",
+      "source": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAANUlEQVR4nGPsYGD4z0ABYGFgYGDQ0NAgS/ONGzcYmCixnYGBYdSAUQNGDYACFgYGSK4iFwAA4LMHM/skNCYAAAAASUVORK5CYII="
+    }
+  ]
+}

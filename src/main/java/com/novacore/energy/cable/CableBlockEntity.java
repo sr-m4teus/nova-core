@@ -20,10 +20,7 @@ public class CableBlockEntity extends BlockEntity {
     public void onLoad() {
         super.onLoad();
         if (level == null || level.isClientSide()) return;
-
-        EnergyNetworkManager<BlockPos, CableEndpointKey> manager = CableNetworks.get(level);
-        manager.addNode(worldPosition);
-        refreshEndpoints(manager);
+        joinNetwork();
     }
 
     @Override
@@ -46,7 +43,22 @@ public class CableBlockEntity extends BlockEntity {
     /** Called by {@link CableBlock#neighborChanged} to re-scan for capabilities on adjacent blocks. */
     public void refreshNeighbors() {
         if (level == null || level.isClientSide()) return;
-        refreshEndpoints(CableNetworks.get(level));
+        joinNetwork();
+    }
+
+    /**
+     * Registers this cable in the level's network if it isn't already, then rescans its 6 sides.
+     * Normally {@link #onLoad()} alone would register the node, but a neighbor placed in the same
+     * tick can trigger {@link #refreshNeighbors()} before this cable's own onLoad has run (seen in
+     * GameTests, where several blocks are placed back to back with no tick boundary between them),
+     * so joining defensively here avoids depending on that ordering.
+     */
+    private void joinNetwork() {
+        EnergyNetworkManager<BlockPos, CableEndpointKey> manager = CableNetworks.get(level);
+        if (manager.networkOf(worldPosition) == null) {
+            manager.addNode(worldPosition);
+        }
+        refreshEndpoints(manager);
     }
 
     private void refreshEndpoints(EnergyNetworkManager<BlockPos, CableEndpointKey> manager) {

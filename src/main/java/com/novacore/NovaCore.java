@@ -1,6 +1,7 @@
 package com.novacore;
 
 import java.util.Set;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 
@@ -19,9 +20,14 @@ import com.novacore.energy.generator.ThermalGeneratorBlockEntity;
 import com.novacore.energy.generator.ThermalGeneratorMenu;
 import com.novacore.energy.solar.SolarPanelBlock;
 import com.novacore.energy.solar.SolarPanelBlockEntity;
+import com.novacore.gametest.EnergyFullCycleGameTests;
 
 import net.minecraft.core.registries.Registries;
+import net.minecraft.gametest.framework.FunctionGameTestInstance;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.gametest.framework.TestData;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.BlockItem;
@@ -35,6 +41,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -50,6 +57,7 @@ public class NovaCore {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES = DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
     public static final DeferredRegister<MenuType<?>> MENU_TYPES = DeferredRegister.create(Registries.MENU, MODID);
+    public static final DeferredRegister<Consumer<GameTestHelper>> TEST_FUNCTIONS = DeferredRegister.create(Registries.TEST_FUNCTION, MODID);
 
     public static final DeferredBlock<CableBlock> CABLE = BLOCKS.registerBlock("cable", CableBlock::new,
             p -> p.mapColor(MapColor.METAL).strength(1.5F).sound(SoundType.METAL));
@@ -92,6 +100,9 @@ public class NovaCore {
     public static final DeferredHolder<MenuType<?>, MenuType<ElectricFurnaceMenu>> ELECTRIC_FURNACE_MENU =
             MENU_TYPES.register("electric_furnace", () -> new MenuType<>(ElectricFurnaceMenu::new, FeatureFlags.DEFAULT_FLAGS));
 
+    public static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> ENERGY_FULL_CYCLE_TEST_FUNCTION =
+            TEST_FUNCTIONS.register("energy_full_cycle", () -> EnergyFullCycleGameTests::energyFullCycle);
+
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN_TAB = CREATIVE_MODE_TABS.register("main", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.novacore"))
             .icon(() -> CABLE_ITEM.get().getDefaultInstance())
@@ -111,8 +122,10 @@ public class NovaCore {
         BLOCK_ENTITY_TYPES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
         MENU_TYPES.register(modEventBus);
+        TEST_FUNCTIONS.register(modEventBus);
 
         modEventBus.addListener(this::registerCapabilities);
+        modEventBus.addListener(this::registerGameTests);
 
         NeoForge.EVENT_BUS.addListener(CableNetworks::onLevelTick);
     }
@@ -126,5 +139,13 @@ public class NovaCore {
                 (panel, direction) -> panel.energyHandler());
         event.registerBlockEntity(Capabilities.Energy.BLOCK, ELECTRIC_FURNACE_BLOCK_ENTITY.get(),
                 (furnace, direction) -> furnace.energyHandler());
+    }
+
+    private void registerGameTests(RegisterGameTestsEvent event) {
+        var environment = event.registerEnvironment(Identifier.fromNamespaceAndPath(MODID, "energy_full_cycle_env"));
+        var testData = new TestData<>(environment, Identifier.withDefaultNamespace("empty"), 400, 0, true);
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(MODID, "energy_full_cycle"),
+                new FunctionGameTestInstance(ENERGY_FULL_CYCLE_TEST_FUNCTION.getKey(), testData));
     }
 }

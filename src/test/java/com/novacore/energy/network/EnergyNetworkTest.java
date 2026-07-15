@@ -169,6 +169,34 @@ class EnergyNetworkTest {
         assertEquals(0, realProvider.available);
     }
 
+    @Test
+    void uninsertableConsumerCannotStarveARealConsumerOfItsFairShare() {
+        // Regression test: mirrors unextractableProviderCannotInflateWhatGetsDelivered, but on the
+        // insert side. A node registered as consumer only because every endpoint gets both roles
+        // (e.g. a generator's own buffer, maxInsert=0) can report a huge getDemand() (capacity -
+        // amount) that has nothing to do with what it'll actually accept. Before this was fixed, a
+        // single proportional pass sized shares off that reported demand, so a phantom consumer
+        // with demand=4000 next to a real one with demand=200 soaked up ~95% of a 20-unit transfer
+        // into a share that then got rejected outright -- most of the extracted energy was simply
+        // discarded instead of reaching the real consumer that could actually use it.
+        var network = new EnergyNetwork<Integer, Integer>();
+        network.addNode(1);
+        network.addNode(2);
+        network.addNode(3);
+        var provider = new TrackingProvider(20);
+        var deadEndConsumer = new UninsertableConsumer(4000);
+        var realConsumer = new TrackingConsumer(200);
+        network.attachProvider(1, provider);
+        network.attachConsumer(2, deadEndConsumer);
+        network.attachConsumer(3, realConsumer);
+
+        var result = network.tick();
+
+        assertEquals(20, result.totalTransferred());
+        assertEquals(20, realConsumer.received);
+        assertEquals(0, provider.available);
+    }
+
     private static EnergyProvider spyProvider(long available) {
         return new TrackingProvider(available);
     }
@@ -214,6 +242,26 @@ class EnergyNetworkTest {
 
         @Override
         public long extract(long amount) {
+            return 0;
+        }
+    }
+
+    /** Reports demand via getDemand() but never actually accepts anything, like a producer-only
+     * device (maxInsert=0) attached to a cable that treats every endpoint as a potential consumer. */
+    private static final class UninsertableConsumer implements EnergyConsumer {
+        private final long demand;
+
+        UninsertableConsumer(long demand) {
+            this.demand = demand;
+        }
+
+        @Override
+        public long getDemand() {
+            return demand;
+        }
+
+        @Override
+        public long insert(long amount) {
             return 0;
         }
     }

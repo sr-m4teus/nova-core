@@ -19,6 +19,11 @@ public final class EnergyNetwork<K, E> {
         static final DistributionResult EMPTY = new DistributionResult(0, 0, 0);
     }
 
+    @FunctionalInterface
+    private interface EnergyMover<E> {
+        long move(E key, long amount);
+    }
+
     private final Set<K> nodes = new LinkedHashSet<>();
     private final Map<E, EnergyProvider> providers = new LinkedHashMap<>();
     private final Map<E, EnergyConsumer> consumers = new LinkedHashMap<>();
@@ -98,24 +103,56 @@ public final class EnergyNetwork<K, E> {
             return new DistributionResult(0, totalDemand, 0);
         }
 
-        // Extract first: a provider's reported getAvailable() is stored amount, not necessarily
-        // extractable amount (e.g. a pure consumer with maxExtract=0 still reports whatever it
-        // holds). Extracting before inserting means the real extract() call -- which each handler
-        // enforces its own limits on -- is what bounds totalExtracted, so a node that can't
-        // actually supply energy can't inflate what gets delivered to consumers.
-        long totalExtracted = 0;
-        for (var share : largestRemainderShares(available, transferable).entrySet()) {
-            if (share.getValue() <= 0) continue;
-            totalExtracted += providers.get(share.getKey()).extract(share.getValue());
-        }
-
-        long totalInserted = 0;
-        for (var share : largestRemainderShares(demand, totalExtracted).entrySet()) {
-            if (share.getValue() <= 0) continue;
-            totalInserted += consumers.get(share.getKey()).insert(share.getValue());
-        }
+        // Every endpoint is registered as both a provider and a consumer (the cable can't know
+        // ahead of time which role a handler actually supports), so getAvailable()/getDemand()
+        // are only ever *reported* figures -- a node that rejects every real extract()/insert()
+        // call (maxExtract=0 or maxInsert=0) still counts toward the totals above. A single
+        // proportional split would let such a node's reported figure dominate the shares and
+        // either starve the real parties of most of their fair amount (a phantom consumer with
+        // huge demand) or leave real supply unclaimed (a phantom provider with huge stored
+        // amount). waterFill runs the split in rounds instead: whatever a party doesn't actually
+        // move goes back into the pool for the rest, and a party that moved nothing is dropped
+        // from consideration, so a dead end can cost at most one round, not the whole transfer.
+        long totalExtracted = waterFill(available, transferable, (key, amount) -> providers.get(key).extract(amount));
+        long totalInserted = waterFill(demand, totalExtracted, (key, amount) -> consumers.get(key).insert(amount));
 
         return new DistributionResult(totalExtracted, totalDemand, totalInserted);
+    }
+
+    private long waterFill(Map<E, Long> weights, long amount, EnergyMover<E> mover) {
+        Map<E, Long> remainingWeights = new LinkedHashMap<>(weights);
+        long remainingAmount = amount;
+        long totalMoved = 0;
+
+        while (remainingAmount > 0 && !remainingWeights.isEmpty()) {
+            Map<E, Long> shares = largestRemainderShares(remainingWeights, remainingAmount);
+            long movedThisRound = 0;
+            List<E> settled = new ArrayList<>();
+
+            for (E key : remainingWeights.keySet()) {
+                long share = shares.getOrDefault(key, 0L);
+                if (share <= 0) continue;
+
+                long moved = mover.move(key, share);
+                totalMoved += moved;
+                movedThisRound += moved;
+
+                long newWeight = remainingWeights.get(key) - moved;
+                if (moved <= 0 || newWeight <= 0) {
+                    settled.add(key);
+                } else {
+                    remainingWeights.put(key, newWeight);
+                }
+            }
+
+            remainingWeights.keySet().removeAll(settled);
+            remainingAmount -= movedThisRound;
+            if (movedThisRound == 0) {
+                break;
+            }
+        }
+
+        return totalMoved;
     }
 
     /**

@@ -14,6 +14,8 @@ import com.novacore.energy.cable.CableNetworks;
 import com.novacore.energy.generator.ThermalGeneratorBlock;
 import com.novacore.energy.generator.ThermalGeneratorBlockEntity;
 import com.novacore.energy.generator.ThermalGeneratorMenu;
+import com.novacore.energy.solar.SolarPanelBlock;
+import com.novacore.energy.solar.SolarPanelBlockEntity;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -73,6 +75,12 @@ public class NovaCore {
     public static final DeferredHolder<MenuType<?>, MenuType<ThermalGeneratorMenu>> THERMAL_GENERATOR_MENU =
             MENU_TYPES.register("thermal_generator", () -> new MenuType<>(ThermalGeneratorMenu::new, FeatureFlags.DEFAULT_FLAGS));
 
+    public static final DeferredBlock<SolarPanelBlock> SOLAR_PANEL = BLOCKS.registerBlock("solar_panel",
+            SolarPanelBlock::new, p -> p.mapColor(MapColor.COLOR_BLUE).strength(1.5F).sound(SoundType.GLASS));
+    public static final DeferredItem<BlockItem> SOLAR_PANEL_ITEM = ITEMS.registerSimpleBlockItem("solar_panel", SOLAR_PANEL);
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SolarPanelBlockEntity>> SOLAR_PANEL_BLOCK_ENTITY =
+            BLOCK_ENTITY_TYPES.register("solar_panel", () -> new BlockEntityType<>(SolarPanelBlockEntity::new, Set.of(SOLAR_PANEL.get())));
+
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN_TAB = CREATIVE_MODE_TABS.register("main", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.novacore"))
             .icon(() -> CABLE_ITEM.get().getDefaultInstance())
@@ -82,6 +90,7 @@ public class NovaCore {
                 output.accept(BATTERY_ADVANCED_ITEM.get());
                 output.accept(BATTERY_SUPREME_ITEM.get());
                 output.accept(THERMAL_GENERATOR_ITEM.get());
+                output.accept(SOLAR_PANEL_ITEM.get());
             }).build());
 
     public NovaCore(IEventBus modEventBus, ModContainer modContainer) {
@@ -101,5 +110,7 @@ public class NovaCore {
                 (battery, direction) -> battery.energyHandler());
         event.registerBlockEntity(Capabilities.Energy.BLOCK, THERMAL_GENERATOR_BLOCK_ENTITY.get(),
                 (generator, direction) -> generator.energyHandler());
+        event.registerBlockEntity(Capabilities.Energy.BLOCK, SOLAR_PANEL_BLOCK_ENTITY.get(),
+                (panel, direction) -> panel.energyHandler());
     }
 }

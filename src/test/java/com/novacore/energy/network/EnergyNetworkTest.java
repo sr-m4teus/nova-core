@@ -125,6 +125,50 @@ class EnergyNetworkTest {
         assertEquals(75, smallProvider.available);
     }
 
+    @Test
+    void unextractableProviderCannotInflateWhatGetsDelivered() {
+        // Regression test: a node that's registered as both provider and consumer (like every
+        // real cable endpoint is -- the network doesn't know ahead of time which role a handler
+        // actually supports) can report a nonzero getAvailable() from its own stored energy while
+        // rejecting every real extract() call, e.g. a consumer-only device like the electric
+        // furnace (maxExtract=0). Before this was fixed, tick() summed getAvailable() into
+        // totalAvailable to size the insert to consumers *before* attempting any real extraction,
+        // so this stored-but-unextractable amount was delivered to other consumers anyway --
+        // energy created from nothing.
+        var network = new EnergyNetwork<Integer, Integer>();
+        network.addNode(1);
+        network.addNode(2);
+        var deadEndProvider = new UnextractableProvider(500);
+        var consumer = new TrackingConsumer(1000);
+        network.attachProvider(1, deadEndProvider);
+        network.attachConsumer(2, consumer);
+
+        var result = network.tick();
+
+        assertEquals(0, result.totalTransferred());
+        assertEquals(0, consumer.received);
+    }
+
+    @Test
+    void realProviderStillSuppliesEvenWhenAnUnextractableProviderIsAlsoPresent() {
+        var network = new EnergyNetwork<Integer, Integer>();
+        network.addNode(1);
+        network.addNode(2);
+        network.addNode(3);
+        var deadEndProvider = new UnextractableProvider(500);
+        var realProvider = new TrackingProvider(100);
+        var consumer = new TrackingConsumer(1000);
+        network.attachProvider(1, deadEndProvider);
+        network.attachProvider(2, realProvider);
+        network.attachConsumer(3, consumer);
+
+        var result = network.tick();
+
+        assertEquals(100, result.totalTransferred());
+        assertEquals(100, consumer.received);
+        assertEquals(0, realProvider.available);
+    }
+
     private static EnergyProvider spyProvider(long available) {
         return new TrackingProvider(available);
     }
@@ -150,6 +194,27 @@ class EnergyNetworkTest {
             long extracted = Math.min(amount, available);
             available -= extracted;
             return extracted;
+        }
+    }
+
+    /** Reports stored energy via getAvailable() but never actually yields it, like a
+     * consumer-only device (maxExtract=0) attached to a cable that treats every endpoint as a
+     * potential provider. */
+    private static final class UnextractableProvider implements EnergyProvider {
+        private final long available;
+
+        UnextractableProvider(long available) {
+            this.available = available;
+        }
+
+        @Override
+        public long getAvailable() {
+            return available;
+        }
+
+        @Override
+        public long extract(long amount) {
+            return 0;
         }
     }
 

@@ -98,16 +98,21 @@ public final class EnergyNetwork<K, E> {
             return new DistributionResult(0, totalDemand, 0);
         }
 
-        long totalInserted = 0;
-        for (var share : largestRemainderShares(demand, transferable).entrySet()) {
-            if (share.getValue() <= 0) continue;
-            totalInserted += consumers.get(share.getKey()).insert(share.getValue());
-        }
-
+        // Extract first: a provider's reported getAvailable() is stored amount, not necessarily
+        // extractable amount (e.g. a pure consumer with maxExtract=0 still reports whatever it
+        // holds). Extracting before inserting means the real extract() call -- which each handler
+        // enforces its own limits on -- is what bounds totalExtracted, so a node that can't
+        // actually supply energy can't inflate what gets delivered to consumers.
         long totalExtracted = 0;
-        for (var share : largestRemainderShares(available, totalInserted).entrySet()) {
+        for (var share : largestRemainderShares(available, transferable).entrySet()) {
             if (share.getValue() <= 0) continue;
             totalExtracted += providers.get(share.getKey()).extract(share.getValue());
+        }
+
+        long totalInserted = 0;
+        for (var share : largestRemainderShares(demand, totalExtracted).entrySet()) {
+            if (share.getValue() <= 0) continue;
+            totalInserted += consumers.get(share.getKey()).insert(share.getValue());
         }
 
         return new DistributionResult(totalExtracted, totalDemand, totalInserted);

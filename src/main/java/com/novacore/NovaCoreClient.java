@@ -1,5 +1,6 @@
 package com.novacore;
 
+import com.novacore.energy.furnace.ElectricFurnaceScreen;
 import com.novacore.energy.generator.ThermalGeneratorScreen;
 
 import net.neoforged.api.distmarker.Dist;
@@ -15,5 +16,6 @@ public class NovaCoreClient {
     @SubscribeEvent
     static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(NovaCore.THERMAL_GENERATOR_MENU.get(), ThermalGeneratorScreen::new);
+        event.register(NovaCore.ELECTRIC_FURNACE_MENU.get(), ElectricFurnaceScreen::new);
     }
 }

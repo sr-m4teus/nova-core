@@ -5,5 +5,6 @@
   "block.novacore.battery_advanced": "Advanced Battery",
   "block.novacore.battery_supreme": "Supreme Battery",
   "block.novacore.thermal_generator": "Thermal Generator",
-  "block.novacore.solar_panel": "Solar Panel"
+  "block.novacore.solar_panel": "Solar Panel",
+  "block.novacore.electric_furnace": "Electric Furnace"
 }

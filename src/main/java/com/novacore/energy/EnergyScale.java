@@ -14,8 +14,9 @@ package com.novacore.energy;
  *   32,000 FE / 1600 ticks       = 20 FE/tick generation rate
  * </pre>
  *
- * <p>Every later mechanic (solar irradiance, reactor output, ...) should derive its FE values
- * through this same constant rather than introducing a second, inconsistent scale.
+ * <p>Every later mechanic (solar irradiance, reactor output, electric furnace smelting cost, ...)
+ * should derive its FE values through this same constant rather than introducing a second,
+ * inconsistent scale.
  */
 public final class EnergyScale {
     public static final double JOULES_PER_FE = 750.0;

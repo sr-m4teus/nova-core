@@ -11,6 +11,9 @@ import com.novacore.energy.battery.BatteryTier;
 import com.novacore.energy.cable.CableBlock;
 import com.novacore.energy.cable.CableBlockEntity;
 import com.novacore.energy.cable.CableNetworks;
+import com.novacore.energy.furnace.ElectricFurnaceBlock;
+import com.novacore.energy.furnace.ElectricFurnaceBlockEntity;
+import com.novacore.energy.furnace.ElectricFurnaceMenu;
 import com.novacore.energy.generator.ThermalGeneratorBlock;
 import com.novacore.energy.generator.ThermalGeneratorBlockEntity;
 import com.novacore.energy.generator.ThermalGeneratorMenu;
@@ -81,6 +84,14 @@ public class NovaCore {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SolarPanelBlockEntity>> SOLAR_PANEL_BLOCK_ENTITY =
             BLOCK_ENTITY_TYPES.register("solar_panel", () -> new BlockEntityType<>(SolarPanelBlockEntity::new, Set.of(SOLAR_PANEL.get())));
 
+    public static final DeferredBlock<ElectricFurnaceBlock> ELECTRIC_FURNACE = BLOCKS.registerBlock("electric_furnace",
+            ElectricFurnaceBlock::new, p -> p.mapColor(MapColor.STONE).strength(3.5F).sound(SoundType.STONE));
+    public static final DeferredItem<BlockItem> ELECTRIC_FURNACE_ITEM = ITEMS.registerSimpleBlockItem("electric_furnace", ELECTRIC_FURNACE);
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ElectricFurnaceBlockEntity>> ELECTRIC_FURNACE_BLOCK_ENTITY =
+            BLOCK_ENTITY_TYPES.register("electric_furnace", () -> new BlockEntityType<>(ElectricFurnaceBlockEntity::new, Set.of(ELECTRIC_FURNACE.get())));
+    public static final DeferredHolder<MenuType<?>, MenuType<ElectricFurnaceMenu>> ELECTRIC_FURNACE_MENU =
+            MENU_TYPES.register("electric_furnace", () -> new MenuType<>(ElectricFurnaceMenu::new, FeatureFlags.DEFAULT_FLAGS));
+
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN_TAB = CREATIVE_MODE_TABS.register("main", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.novacore"))
             .icon(() -> CABLE_ITEM.get().getDefaultInstance())
@@ -91,6 +102,7 @@ public class NovaCore {
                 output.accept(BATTERY_SUPREME_ITEM.get());
                 output.accept(THERMAL_GENERATOR_ITEM.get());
                 output.accept(SOLAR_PANEL_ITEM.get());
+                output.accept(ELECTRIC_FURNACE_ITEM.get());
             }).build());
 
     public NovaCore(IEventBus modEventBus, ModContainer modContainer) {
@@ -112,5 +124,7 @@ public class NovaCore {
                 (generator, direction) -> generator.energyHandler());
         event.registerBlockEntity(Capabilities.Energy.BLOCK, SOLAR_PANEL_BLOCK_ENTITY.get(),
                 (panel, direction) -> panel.energyHandler());
+        event.registerBlockEntity(Capabilities.Energy.BLOCK, ELECTRIC_FURNACE_BLOCK_ENTITY.get(),
+                (furnace, direction) -> furnace.energyHandler());
     }
 }

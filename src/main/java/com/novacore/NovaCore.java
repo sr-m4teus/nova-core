@@ -11,9 +11,14 @@ import com.novacore.energy.battery.BatteryTier;
 import com.novacore.energy.cable.CableBlock;
 import com.novacore.energy.cable.CableBlockEntity;
 import com.novacore.energy.cable.CableNetworks;
+import com.novacore.energy.generator.ThermalGeneratorBlock;
+import com.novacore.energy.generator.ThermalGeneratorBlockEntity;
+import com.novacore.energy.generator.ThermalGeneratorMenu;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.flag.FeatureFlags;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.level.block.SoundType;
@@ -39,6 +44,7 @@ public class NovaCore {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MODID);
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES = DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
+    public static final DeferredRegister<MenuType<?>> MENU_TYPES = DeferredRegister.create(Registries.MENU, MODID);
 
     public static final DeferredBlock<CableBlock> CABLE = BLOCKS.registerBlock("cable", CableBlock::new,
             p -> p.mapColor(MapColor.METAL).strength(1.5F).sound(SoundType.METAL));
@@ -59,6 +65,14 @@ public class NovaCore {
             BLOCK_ENTITY_TYPES.register("battery", () -> new BlockEntityType<>(BatteryBlockEntity::new,
                     Set.of(BATTERY_BASIC.get(), BATTERY_ADVANCED.get(), BATTERY_SUPREME.get())));
 
+    public static final DeferredBlock<ThermalGeneratorBlock> THERMAL_GENERATOR = BLOCKS.registerBlock("thermal_generator",
+            ThermalGeneratorBlock::new, p -> p.mapColor(MapColor.STONE).strength(3.5F).sound(SoundType.STONE));
+    public static final DeferredItem<BlockItem> THERMAL_GENERATOR_ITEM = ITEMS.registerSimpleBlockItem("thermal_generator", THERMAL_GENERATOR);
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ThermalGeneratorBlockEntity>> THERMAL_GENERATOR_BLOCK_ENTITY =
+            BLOCK_ENTITY_TYPES.register("thermal_generator", () -> new BlockEntityType<>(ThermalGeneratorBlockEntity::new, Set.of(THERMAL_GENERATOR.get())));
+    public static final DeferredHolder<MenuType<?>, MenuType<ThermalGeneratorMenu>> THERMAL_GENERATOR_MENU =
+            MENU_TYPES.register("thermal_generator", () -> new MenuType<>(ThermalGeneratorMenu::new, FeatureFlags.DEFAULT_FLAGS));
+
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN_TAB = CREATIVE_MODE_TABS.register("main", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.novacore"))
             .icon(() -> CABLE_ITEM.get().getDefaultInstance())
@@ -67,6 +81,7 @@ public class NovaCore {
                 output.accept(BATTERY_BASIC_ITEM.get());
                 output.accept(BATTERY_ADVANCED_ITEM.get());
                 output.accept(BATTERY_SUPREME_ITEM.get());
+                output.accept(THERMAL_GENERATOR_ITEM.get());
             }).build());
 
     public NovaCore(IEventBus modEventBus, ModContainer modContainer) {
@@ -74,15 +89,17 @@ public class NovaCore {
         ITEMS.register(modEventBus);
         BLOCK_ENTITY_TYPES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
+        MENU_TYPES.register(modEventBus);
 
         modEventBus.addListener(this::registerCapabilities);
 
-        NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.addListener(CableNetworks::onLevelTick);
     }
 
     private void registerCapabilities(RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(Capabilities.Energy.BLOCK, BATTERY_BLOCK_ENTITY.get(),
                 (battery, direction) -> battery.energyHandler());
+        event.registerBlockEntity(Capabilities.Energy.BLOCK, THERMAL_GENERATOR_BLOCK_ENTITY.get(),
+                (generator, direction) -> generator.energyHandler());
     }
 }

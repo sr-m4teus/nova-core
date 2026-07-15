@@ -5,18 +5,25 @@ import java.util.Set;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
+import com.novacore.energy.battery.BatteryBlock;
+import com.novacore.energy.battery.BatteryBlockEntity;
+import com.novacore.energy.battery.BatteryTier;
 import com.novacore.energy.cable.CableBlock;
 import com.novacore.energy.cable.CableBlockEntity;
 import com.novacore.energy.cable.CableNetworks;
 
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.material.MapColor;
-import net.minecraft.world.level.block.SoundType;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -31,6 +38,7 @@ public class NovaCore {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MODID);
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MODID);
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES = DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
+    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
 
     public static final DeferredBlock<CableBlock> CABLE = BLOCKS.registerBlock("cable", CableBlock::new,
             p -> p.mapColor(MapColor.METAL).strength(1.5F).sound(SoundType.METAL));
@@ -38,12 +46,43 @@ public class NovaCore {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CableBlockEntity>> CABLE_BLOCK_ENTITY =
             BLOCK_ENTITY_TYPES.register("cable", () -> new BlockEntityType<>(CableBlockEntity::new, Set.of(CABLE.get())));
 
+    public static final DeferredBlock<BatteryBlock> BATTERY_BASIC = BLOCKS.registerBlock("battery_basic",
+            p -> new BatteryBlock(p, BatteryTier.BASIC), p -> p.mapColor(MapColor.COLOR_YELLOW).strength(2.0F).sound(SoundType.METAL));
+    public static final DeferredBlock<BatteryBlock> BATTERY_ADVANCED = BLOCKS.registerBlock("battery_advanced",
+            p -> new BatteryBlock(p, BatteryTier.ADVANCED), p -> p.mapColor(MapColor.COLOR_ORANGE).strength(2.0F).sound(SoundType.METAL));
+    public static final DeferredBlock<BatteryBlock> BATTERY_SUPREME = BLOCKS.registerBlock("battery_supreme",
+            p -> new BatteryBlock(p, BatteryTier.SUPREME), p -> p.mapColor(MapColor.COLOR_RED).strength(2.0F).sound(SoundType.METAL));
+    public static final DeferredItem<BlockItem> BATTERY_BASIC_ITEM = ITEMS.registerSimpleBlockItem("battery_basic", BATTERY_BASIC);
+    public static final DeferredItem<BlockItem> BATTERY_ADVANCED_ITEM = ITEMS.registerSimpleBlockItem("battery_advanced", BATTERY_ADVANCED);
+    public static final DeferredItem<BlockItem> BATTERY_SUPREME_ITEM = ITEMS.registerSimpleBlockItem("battery_supreme", BATTERY_SUPREME);
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BatteryBlockEntity>> BATTERY_BLOCK_ENTITY =
+            BLOCK_ENTITY_TYPES.register("battery", () -> new BlockEntityType<>(BatteryBlockEntity::new,
+                    Set.of(BATTERY_BASIC.get(), BATTERY_ADVANCED.get(), BATTERY_SUPREME.get())));
+
+    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN_TAB = CREATIVE_MODE_TABS.register("main", () -> CreativeModeTab.builder()
+            .title(Component.translatable("itemGroup.novacore"))
+            .icon(() -> CABLE_ITEM.get().getDefaultInstance())
+            .displayItems((parameters, output) -> {
+                output.accept(CABLE_ITEM.get());
+                output.accept(BATTERY_BASIC_ITEM.get());
+                output.accept(BATTERY_ADVANCED_ITEM.get());
+                output.accept(BATTERY_SUPREME_ITEM.get());
+            }).build());
+
     public NovaCore(IEventBus modEventBus, ModContainer modContainer) {
         BLOCKS.register(modEventBus);
         ITEMS.register(modEventBus);
         BLOCK_ENTITY_TYPES.register(modEventBus);
+        CREATIVE_MODE_TABS.register(modEventBus);
+
+        modEventBus.addListener(this::registerCapabilities);
 
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.addListener(CableNetworks::onLevelTick);
+    }
+
+    private void registerCapabilities(RegisterCapabilitiesEvent event) {
+        event.registerBlockEntity(Capabilities.Energy.BLOCK, BATTERY_BLOCK_ENTITY.get(),
+                (battery, direction) -> battery.energyHandler());
     }
 }

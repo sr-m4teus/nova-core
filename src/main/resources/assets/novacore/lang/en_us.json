@@ -1,3 +1,7 @@
 {
-  "block.novacore.cable": "Energy Cable"
+  "itemGroup.novacore": "NovaCore",
+  "block.novacore.cable": "Energy Cable",
+  "block.novacore.battery_basic": "Basic Battery",
+  "block.novacore.battery_advanced": "Advanced Battery",
+  "block.novacore.battery_supreme": "Supreme Battery"
 }

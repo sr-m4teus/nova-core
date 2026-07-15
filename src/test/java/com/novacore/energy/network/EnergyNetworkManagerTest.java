@@ -2,9 +2,7 @@ package com.novacore.energy.network;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -16,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class EnergyNetworkManagerTest {
 
     /** Adjacency for a 1-D line of cables: node N is adjacent to N-1 and N+1. */
-    private static EnergyNetworkManager<Integer> lineManager() {
+    private static EnergyNetworkManager<Integer, String> lineManager() {
         return new EnergyNetworkManager<>(node -> List.of(node - 1, node + 1));
     }
 
@@ -93,16 +91,28 @@ class EnergyNetworkManagerTest {
     }
 
     @Test
-    void splitReassignsProvidersAndConsumersToTheirOwnComponent() {
+    void aNodeCanHaveMultipleEndpointsAttached() {
+        var manager = lineManager();
+        manager.addNode(1);
+
+        manager.attachProvider(1, "north-generator", new FakeProvider(100));
+        manager.attachProvider(1, "east-generator", new FakeProvider(50));
+        manager.attachConsumer(1, "south-furnace", new FakeConsumer(120));
+
+        var result = manager.networkOf(1).tick();
+
+        assertEquals(120, result.totalTransferred());
+    }
+
+    @Test
+    void splitReassignsEndpointsToTheirAnchorNodesComponent() {
         var manager = lineManager();
         manager.addNode(1);
         manager.addNode(2);
         manager.addNode(3);
 
-        FakeProvider provider = new FakeProvider(100);
-        FakeConsumer consumer = new FakeConsumer(50);
-        manager.attachProvider(1, provider);
-        manager.attachConsumer(3, consumer);
+        manager.attachProvider(1, "provider", new FakeProvider(100));
+        manager.attachConsumer(3, "consumer", new FakeConsumer(50));
 
         manager.removeNode(2);
 
@@ -119,9 +129,38 @@ class EnergyNetworkManagerTest {
     }
 
     @Test
+    void removingAnchorNodeDetachesItsEndpoints() {
+        var manager = lineManager();
+        manager.addNode(1);
+        manager.addNode(2);
+        manager.attachProvider(1, "provider", new FakeProvider(100));
+        manager.attachConsumer(2, "consumer", new FakeConsumer(50));
+
+        manager.removeNode(1);
+
+        var result = manager.networkOf(2).tick();
+        assertEquals(50, result.totalDemanded());
+        assertEquals(0, result.totalTransferred());
+    }
+
+    @Test
+    void detachRemovesEndpointWithoutTouchingItsNode() {
+        var manager = lineManager();
+        manager.addNode(1);
+        manager.attachProvider(1, "provider", new FakeProvider(100));
+        manager.attachConsumer(1, "consumer", new FakeConsumer(50));
+
+        manager.detach("provider");
+
+        var result = manager.networkOf(1).tick();
+        assertEquals(50, result.totalDemanded());
+        assertEquals(0, result.totalTransferred());
+    }
+
+    @Test
     void attachingToUnknownNodeThrows() {
         var manager = lineManager();
-        assertThrows(IllegalStateException.class, () -> manager.attachProvider(1, new FakeProvider(10)));
+        assertThrows(IllegalStateException.class, () -> manager.attachProvider(1, "provider", new FakeProvider(10)));
     }
 
     private static final class FakeProvider implements EnergyProvider {
@@ -146,7 +185,6 @@ class EnergyNetworkManagerTest {
 
     private static final class FakeConsumer implements EnergyConsumer {
         private long demand;
-        private long received;
 
         FakeConsumer(long demand) {
             this.demand = demand;
@@ -161,7 +199,6 @@ class EnergyNetworkManagerTest {
         public long insert(long amount) {
             long accepted = Math.min(amount, demand);
             demand -= accepted;
-            received += accepted;
             return accepted;
         }
     }

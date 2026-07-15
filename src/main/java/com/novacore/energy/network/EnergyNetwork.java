@@ -8,19 +8,20 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * One connected cluster of cables plus the providers/consumers attached to it.
- * No energy is lost in transport: {@link #tick()} distributes exactly what
- * providers report available, capped by what consumers report they demand.
+ * One connected cluster of cables ({@code K}) plus the providers/consumers ({@code E}) attached
+ * to it. Endpoints are keyed separately from nodes because a single cable node can have several
+ * external endpoints (one per side). No energy is lost in transport: {@link #tick()} distributes
+ * exactly what providers report available, capped by what consumers report they demand.
  */
-public final class EnergyNetwork<K> {
+public final class EnergyNetwork<K, E> {
 
     public record DistributionResult(long totalSupplied, long totalDemanded, long totalTransferred) {
         static final DistributionResult EMPTY = new DistributionResult(0, 0, 0);
     }
 
     private final Set<K> nodes = new LinkedHashSet<>();
-    private final Map<K, EnergyProvider> providers = new LinkedHashMap<>();
-    private final Map<K, EnergyConsumer> consumers = new LinkedHashMap<>();
+    private final Map<E, EnergyProvider> providers = new LinkedHashMap<>();
+    private final Map<E, EnergyConsumer> consumers = new LinkedHashMap<>();
 
     void addNode(K node) {
         nodes.add(node);
@@ -28,22 +29,20 @@ public final class EnergyNetwork<K> {
 
     void removeNode(K node) {
         nodes.remove(node);
-        providers.remove(node);
-        consumers.remove(node);
     }
 
-    void absorb(EnergyNetwork<K> other) {
+    void absorb(EnergyNetwork<K, E> other) {
         nodes.addAll(other.nodes);
         providers.putAll(other.providers);
         consumers.putAll(other.consumers);
     }
 
-    EnergyProvider takeProvider(K node) {
-        return providers.remove(node);
+    EnergyProvider takeProvider(E endpoint) {
+        return providers.remove(endpoint);
     }
 
-    EnergyConsumer takeConsumer(K node) {
-        return consumers.remove(node);
+    EnergyConsumer takeConsumer(E endpoint) {
+        return consumers.remove(endpoint);
     }
 
     public boolean contains(K node) {
@@ -54,17 +53,20 @@ public final class EnergyNetwork<K> {
         return Set.copyOf(nodes);
     }
 
-    public void attachProvider(K node, EnergyProvider provider) {
-        providers.put(node, provider);
+    void attachProvider(E endpoint, EnergyProvider provider) {
+        providers.put(endpoint, provider);
     }
 
-    public void attachConsumer(K node, EnergyConsumer consumer) {
-        consumers.put(node, consumer);
+    void attachConsumer(E endpoint, EnergyConsumer consumer) {
+        consumers.put(endpoint, consumer);
     }
 
-    public void detach(K node) {
-        providers.remove(node);
-        consumers.remove(node);
+    void detachProvider(E endpoint) {
+        providers.remove(endpoint);
+    }
+
+    void detachConsumer(E endpoint) {
+        consumers.remove(endpoint);
     }
 
     public DistributionResult tick() {
@@ -72,7 +74,7 @@ public final class EnergyNetwork<K> {
             return DistributionResult.EMPTY;
         }
 
-        Map<K, Long> demand = new LinkedHashMap<>();
+        Map<E, Long> demand = new LinkedHashMap<>();
         long totalDemand = 0;
         for (var entry : consumers.entrySet()) {
             long d = Math.max(0, entry.getValue().getDemand());
@@ -83,7 +85,7 @@ public final class EnergyNetwork<K> {
             return DistributionResult.EMPTY;
         }
 
-        Map<K, Long> available = new LinkedHashMap<>();
+        Map<E, Long> available = new LinkedHashMap<>();
         long totalAvailable = 0;
         for (var entry : providers.entrySet()) {
             long a = Math.max(0, entry.getValue().getAvailable());
@@ -115,17 +117,17 @@ public final class EnergyNetwork<K> {
      * Splits {@code total} across {@code weights} proportionally, using the largest-remainder
      * method so the shares sum to exactly {@code total} instead of losing units to rounding.
      */
-    private static <K> Map<K, Long> largestRemainderShares(Map<K, Long> weights, long total) {
+    private static <E> Map<E, Long> largestRemainderShares(Map<E, Long> weights, long total) {
         long totalWeight = 0;
         for (long w : weights.values()) totalWeight += w;
 
-        Map<K, Long> shares = new LinkedHashMap<>();
+        Map<E, Long> shares = new LinkedHashMap<>();
         if (totalWeight <= 0 || total <= 0) {
-            for (K k : weights.keySet()) shares.put(k, 0L);
+            for (E k : weights.keySet()) shares.put(k, 0L);
             return shares;
         }
 
-        Map<K, Long> remainders = new LinkedHashMap<>();
+        Map<E, Long> remainders = new LinkedHashMap<>();
         long allocated = 0;
         for (var entry : weights.entrySet()) {
             long share = (total * entry.getValue()) / totalWeight;
@@ -136,10 +138,10 @@ public final class EnergyNetwork<K> {
         }
 
         long leftover = total - allocated;
-        List<K> byRemainder = new ArrayList<>(weights.keySet());
+        List<E> byRemainder = new ArrayList<>(weights.keySet());
         byRemainder.sort((a, b) -> Long.compare(remainders.get(b), remainders.get(a)));
         for (int i = 0; i < leftover; i++) {
-            K key = byRemainder.get(i % byRemainder.size());
+            E key = byRemainder.get(i % byRemainder.size());
             shares.merge(key, 1L, Long::sum);
         }
 

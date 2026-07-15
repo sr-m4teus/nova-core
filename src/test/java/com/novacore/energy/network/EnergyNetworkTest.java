@@ -8,7 +8,7 @@ class EnergyNetworkTest {
 
     @Test
     void tickIsNoOpWithNoConsumers() {
-        var network = new EnergyNetwork<Integer>();
+        var network = new EnergyNetwork<Integer, Integer>();
         network.addNode(1);
         network.attachProvider(1, spyProvider(100));
 
@@ -21,7 +21,7 @@ class EnergyNetworkTest {
 
     @Test
     void tickIsNoOpWhenTotalDemandIsZero() {
-        var network = new EnergyNetwork<Integer>();
+        var network = new EnergyNetwork<Integer, Integer>();
         network.addNode(1);
         network.addNode(2);
         network.attachProvider(1, spyProvider(100));
@@ -34,7 +34,7 @@ class EnergyNetworkTest {
 
     @Test
     void singleProviderSingleConsumerTransfersExactAmount() {
-        var network = new EnergyNetwork<Integer>();
+        var network = new EnergyNetwork<Integer, Integer>();
         network.addNode(1);
         network.addNode(2);
         var provider = new TrackingProvider(1000);
@@ -51,7 +51,7 @@ class EnergyNetworkTest {
 
     @Test
     void demandExceedingSupplyIsCappedAtAvailable() {
-        var network = new EnergyNetwork<Integer>();
+        var network = new EnergyNetwork<Integer, Integer>();
         network.addNode(1);
         network.addNode(2);
         var provider = new TrackingProvider(100);
@@ -68,7 +68,7 @@ class EnergyNetworkTest {
 
     @Test
     void supplyExceedingDemandIsCappedAtDemand() {
-        var network = new EnergyNetwork<Integer>();
+        var network = new EnergyNetwork<Integer, Integer>();
         network.addNode(1);
         network.addNode(2);
         var provider = new TrackingProvider(1000);
@@ -84,7 +84,7 @@ class EnergyNetworkTest {
 
     @Test
     void scarceSupplyIsSplitProportionallyToDemandAndConservesExactTotal() {
-        var network = new EnergyNetwork<Integer>();
+        var network = new EnergyNetwork<Integer, Integer>();
         network.addNode(1);
         network.addNode(2);
         network.addNode(3);
@@ -106,7 +106,7 @@ class EnergyNetworkTest {
 
     @Test
     void multipleProvidersAreDrawnProportionallyToAvailability() {
-        var network = new EnergyNetwork<Integer>();
+        var network = new EnergyNetwork<Integer, Integer>();
         network.addNode(1);
         network.addNode(2);
         network.addNode(3);
